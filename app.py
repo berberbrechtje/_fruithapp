@@ -1,4 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
+from flask_session import Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+from werkzeug.security import check_password_hash, generate_password_hash
+# from models import *
+
 import os
 app = Flask(__name__)
 
@@ -7,10 +13,16 @@ def index():
     # boom = os.path.join('moerbijboom.jpg')
     return render_template("index.html")
 
-# @app.route('/hello/')
-# @app.route('/hello/<name>')
-# def hello(name=None):
-#     return render_template('hello.html', name=name)
+@app.route("/info", methods=['POST', 'GET'])
+def info():
+    if request.method == 'GET':
+        return render_template("info.html")
+
+
+    elif request.method == "POST":
+        return render_template("track.html")
+
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -24,6 +36,57 @@ def login():
     # the code below is executed if the request method
     # was GET or the credentials were invalid
     return render_template('login.html', error=error)
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    """Register user"""
+
+    # Forget any user_id
+    # session.clear()
+
+    if request.method == "GET":
+        return render_template("register.html")
+
+    # User reached route via POST (as by submitting a form via POST)
+    if request.method == "POST":
+
+        # request username, password, confirmation
+        username = request.form.get("username")
+        password = request.form.get("password")
+        confirmation = request.form.get("confirmation")
+
+        if not request.form.get("username"):
+            errortext = "Username was not submitted"
+            return render_template("error.html", errortext=errortext)
+
+        # Ensure password was submitted
+        elif not request.form.get("password"):
+            errortext = "Password was not submitted"
+            return render_template("error.html", errortext=errortext)
+
+        elif not request.form.get("confirmation"):
+            errortext = "confirmation was not submitted"
+            return render_template("error.html", errortext=errortext)
+
+        elif password != confirmation:
+            errortext = "passwords differ"
+            return render_template("error.html", errortext=errortext)
+
+        # Create a hash of the password
+        hash = generate_password_hash(password)
+
+        # Add this to the database:
+        user = Users(username=username, password=hash)
+        db.session.add(user)
+        db.session.commit()
+
+
+        # Remember which user has logged in
+        session[username] = username
+
+        # Redirect user to home page
+        return redirect("/")
+
 
 @app.route('/game_rules', methods=['POST', 'GET'])
 def game_rules():
